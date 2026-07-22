@@ -5,11 +5,6 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/laboiteacode/filament-business-hours.svg?style=flat-square)](https://packagist.org/packages/laboiteacode/filament-business-hours)
 [![License](https://img.shields.io/packagist/l/laboiteacode/filament-business-hours.svg?style=flat-square)](LICENSE.md)
 
-> [!WARNING]
-> This package is under active development (0.x). The API and the stored
-> format may still change between minor releases; do not rely on it in
-> production yet.
-
 Manage the opening hours of a business from your Filament panel: a weekly
 24-hour grid you drag ranges onto, exceptional closures, special-hours days,
 vacation periods and timezones. Everything is stored **exactly in the format
@@ -82,23 +77,52 @@ public function panel(Panel $panel): Panel
 
 That's it: a "Business hours" page appears in your panel navigation.
 
-## Using the stored hours in your application
+## Querying the hours with spatie/opening-hours
 
-The page manages one row of the `business_hours` table (the `default` one
-unless configured otherwise). Query it anywhere with spatie/opening-hours:
+The page persists everything in one row of the package's `business_hours`
+table (the `default` row unless configured otherwise), and that row holds the
+**exact definition format of spatie/opening-hours**. There is no export or
+conversion step: turning a stored record into a queryable object is a plain
+`OpeningHours::create()` call, which the model wraps for you.
+
+### The one-liner
 
 ```php
 use LaBoiteACode\FilamentBusinessHours\Models\BusinessHours;
 
-// The spatie object, ready to be queried (null when nothing is stored yet):
-$openingHours = BusinessHours::openingHours(); // or ->openingHours('shop-paris')
+$openingHours = BusinessHours::openingHours();             // the "default" record
+$openingHours = BusinessHours::openingHours('shop-paris'); // another record
 
-$openingHours->isOpenAt(now());
-$openingHours->nextOpen(now());
-$openingHours->forWeek();
+// Null when no record has been saved yet under that key.
 ```
 
-Or from a record instance:
+### Everything spatie can answer, your data can too
+
+What you get back is a regular `Spatie\OpeningHours\OpeningHours` instance,
+so the [whole spatie query API](https://github.com/spatie/opening-hours#usage)
+applies to the hours managed from your panel:
+
+```php
+$openingHours->isOpenAt(new DateTime('2026-12-24 11:00')); // special hours applied
+$openingHours->isClosedAt(now());
+$openingHours->isOpenOn('monday');
+
+$openingHours->nextOpen(now());   // when do we open next?
+$openingHours->nextClose(now());  // until when are we open?
+
+$openingHours->forDay('monday');                    // the weekly ranges of a day
+$openingHours->forDate(new DateTime('2026-12-25')); // a concrete date, exceptions applied
+$openingHours->forWeek();
+
+$openingHours->exceptionalClosingDates();           // vacations and closures, expanded
+```
+
+The timezone picked in the panel is part of the definition, so date and time
+queries are interpreted in that timezone automatically. Labels typed in the
+panel ("Christmas", "Summer break", ...) travel as spatie `data` and come
+back through `$openingHours->forDate(...)->data`.
+
+### From a record instance
 
 ```php
 $record = BusinessHours::resolve('default');
@@ -125,11 +149,75 @@ vacation ranges), the `overflow` flag and the `timezone`:
 ]
 ```
 
-Because the columns themselves (`hours`, `exceptions`) already hold spatie
-formats, you can also build, seed or mutate records from your own code and the
-page will pick them up. Exception entries the page cannot represent (recurring
-`m-d to m-d` periods, structured `data` payloads, ...) are preserved verbatim
-across edits.
+### Without the model
+
+Because the columns themselves are stored in spatie shape, nothing forces you
+through the Eloquent model. Any code that can read the table can assemble the
+definition on its own, for instance from a raw query or another service:
+
+```php
+use Illuminate\Support\Facades\DB;
+use Spatie\OpeningHours\OpeningHours;
+
+$row = DB::table('business_hours')->where('key', 'default')->first();
+
+$data = json_decode($row->hours, true)
+    + ['exceptions' => json_decode($row->exceptions, true)];
+
+if ($row->overflow) {
+    $data['overflow'] = true;
+}
+
+if ($row->timezone) {
+    $data['timezone'] = $row->timezone;
+}
+
+$openingHours = OpeningHours::create($data);
+```
+
+### Caching busy paths
+
+`OpeningHours::create()` parses the whole definition each time. On a page hit
+on every request (a storefront header showing "open until 18:00", say), cache
+the definition array rather than rebuilding it:
+
+```php
+use Spatie\OpeningHours\OpeningHours;
+
+$data = cache()->remember(
+    'business-hours:default',
+    now()->addHour(),
+    fn (): array => BusinessHours::resolve('default')->toOpeningHoursArray(),
+);
+
+$openingHours = OpeningHours::create($data);
+```
+
+Invalidate the cache key when the record is saved (a model observer on
+`BusinessHours`, or simply a short TTL as above).
+
+### Seeding and writing from code
+
+The door swings both ways: seeders, imports or your own admin code can write
+rows directly, and the page will pick them up on next load:
+
+```php
+BusinessHours::create([
+    'key' => 'shop-paris',
+    'timezone' => 'Europe/Paris',
+    'hours' => [
+        'monday' => ['09:00-12:00', '14:00-18:00'],
+        'tuesday' => ['09:00-18:00'],
+    ],
+    'exceptions' => [
+        '12-25' => ['hours' => [], 'data' => 'Christmas'],
+    ],
+]);
+```
+
+Exception entries the page cannot represent (recurring `m-d to m-d` periods,
+structured `data` payloads, ...) are preserved verbatim across edits, so
+advanced hand-written definitions survive the UI.
 
 ## The grid
 

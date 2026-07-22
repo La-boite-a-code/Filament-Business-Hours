@@ -2,6 +2,17 @@
 
 All notable changes to `laboiteacode/filament-business-hours` will be documented in this file.
 
+## v1.0.0 - 2026-07-23
+
+First stable release. The plugin API and the stored format (native
+spatie/opening-hours definitions) are now considered stable.
+
+- Documentation: a full "Querying the hours with spatie/opening-hours"
+  guide (one-liner, spatie query examples, model-free raw access, caching,
+  seeding from code).
+- License: MIT copyright notice updated (Alexandre Ribes, La Boîte à Code).
+- Removed the development warning from the README.
+
 ## v0.2.0 - 2026-07-22
 
 Hardening and quality release.
