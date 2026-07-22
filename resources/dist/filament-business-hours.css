@@ -1,0 +1,528 @@
+/*
+ * Filament Business Hours - self-contained styles.
+ *
+ * Colors come from the CSS variables Filament defines at runtime from the
+ * panel palette (--primary-*, --gray-*), with neutral fallbacks so the page
+ * still renders outside a panel. Light and dark aware.
+ */
+
+[x-cloak] {
+    display: none !important;
+}
+
+.fbh-page {
+    --fbh-border: var(--gray-200, #e5e7eb);
+    --fbh-cell-bg: #fff;
+    --fbh-surface: #fff;
+    --fbh-muted: var(--gray-500, #6b7280);
+    --fbh-strong: var(--gray-950, #0a0a0a);
+    --fbh-range: var(--primary-600, #4f46e5);
+    --fbh-range-contrast: #fff;
+
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.dark .fbh-page {
+    --fbh-border: color-mix(in srgb, var(--gray-700, #3f3f46) 70%, transparent);
+    --fbh-cell-bg: color-mix(in srgb, var(--gray-800, #27272a) 45%, transparent);
+    --fbh-surface: var(--gray-900, #18181b);
+    --fbh-muted: var(--gray-400, #a1a1aa);
+    --fbh-strong: var(--gray-100, #f4f4f5);
+    --fbh-range: var(--primary-500, #6366f1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Grid frame                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.fbh-scroll {
+    overflow: auto;
+    max-height: min(72vh, 60rem);
+    border: 1px solid var(--fbh-border);
+    border-radius: 0.75rem;
+    overscroll-behavior: contain;
+}
+
+.fbh-grid {
+    /* --fbh-hour and --fbh-gap are set inline from the Blade view so the JS
+       and the CSS always agree on the cell geometry. */
+    --fbh-hour: 40px;
+    --fbh-gap: 4px;
+    --fbh-inset: 0.375rem;
+
+    position: relative;
+    display: grid;
+    grid-template-columns: 4rem repeat(7, minmax(7rem, 1fr));
+    grid-template-rows: auto 1fr;
+    min-width: 53rem;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Header row                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.fbh-corner,
+.fbh-day-head {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--fbh-surface);
+    border-bottom: 1px solid var(--fbh-border);
+}
+
+.fbh-corner {
+    left: 0;
+    z-index: 30;
+}
+
+.fbh-day-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+    padding: 0.5rem 0.625rem;
+}
+
+.fbh-day-head--today .fbh-day-name {
+    color: var(--fbh-range);
+}
+
+.fbh-day-title {
+    min-width: 0;
+}
+
+.fbh-day-name {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--fbh-strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fbh-day-total {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--fbh-muted);
+    white-space: nowrap;
+}
+
+.fbh-day-actions {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.fbh-day-head:hover .fbh-day-actions,
+.fbh-day-actions:focus-within {
+    opacity: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hour gutter                                                                */
+/* -------------------------------------------------------------------------- */
+
+.fbh-gutter {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background: var(--fbh-surface);
+}
+
+.fbh-gutter-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: var(--fbh-hour);
+    padding-inline-end: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--fbh-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Day columns: one bordered cell per hour                                    */
+/* -------------------------------------------------------------------------- */
+
+.fbh-col {
+    position: relative;
+    height: calc(var(--fbh-hour) * 24);
+    cursor: cell;
+    touch-action: pan-y;
+}
+
+.fbh-cell {
+    box-sizing: border-box;
+    height: var(--fbh-hour);
+    padding: calc(var(--fbh-gap) / 2) var(--fbh-inset);
+}
+
+.fbh-cell::before {
+    content: '';
+    display: block;
+    box-sizing: border-box;
+    height: 100%;
+    border: 1px solid var(--fbh-border);
+    border-radius: 0.4rem;
+    background: var(--fbh-cell-bg);
+}
+
+.fbh-col--today .fbh-cell::before {
+    background: color-mix(in srgb, var(--fbh-range) 4%, var(--fbh-cell-bg));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Range segments (one per covered hour cell)                                 */
+/* -------------------------------------------------------------------------- */
+
+.fbh-seg {
+    position: absolute;
+    inset-inline: var(--fbh-inset);
+    box-sizing: border-box;
+    border-radius: 0.4rem;
+    background: var(--fbh-range);
+    cursor: grab;
+    touch-action: none;
+    transition: filter 0.1s ease;
+}
+
+.fbh-seg--hover {
+    filter: brightness(1.08);
+}
+
+.fbh-seg:focus-visible {
+    outline: 2px solid var(--fbh-range);
+    outline-offset: 2px;
+}
+
+.fbh-seg--preview,
+.fbh-seg--dragging {
+    pointer-events: none;
+}
+
+.fbh-seg--preview {
+    opacity: 0.55;
+}
+
+.fbh-seg--dragging {
+    opacity: 0.85;
+    box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.35);
+    z-index: 5;
+}
+
+.fbh-seg--overnight-end {
+    border-bottom: 2px dashed color-mix(in srgb, var(--fbh-range-contrast) 65%, transparent);
+}
+
+/* Resize handles, on the first and last segment of a range. */
+.fbh-seg-handle {
+    position: absolute;
+    inset-inline: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 3;
+}
+
+.fbh-seg-handle--start {
+    top: -3px;
+}
+
+.fbh-seg-handle--end {
+    bottom: -3px;
+}
+
+.fbh-seg-handle::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.25rem;
+    height: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fbh-range-contrast) 75%, transparent);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.fbh-seg:hover .fbh-seg-handle::after,
+.fbh-seg--hover .fbh-seg-handle::after,
+.fbh-seg:focus-visible .fbh-seg-handle::after {
+    opacity: 1;
+}
+
+/* Minute badge on partial cells ("30" on a 05:00 cell = boundary at 05:30). */
+.fbh-seg-badge {
+    position: absolute;
+    inset-inline-end: 0.375rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    padding: 0 0.3125rem;
+    border: 1px solid var(--fbh-border);
+    border-radius: 0.375rem;
+    background: var(--fbh-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    color: var(--fbh-strong);
+    font-size: 0.625rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.125rem;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* The explicit "edit" affordance on the first segment of a range. */
+.fbh-seg-edit {
+    position: absolute;
+    top: 2px;
+    inset-inline-start: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 0.25rem;
+    color: var(--fbh-range-contrast);
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.1s ease, background-color 0.1s ease;
+    z-index: 2;
+}
+
+.fbh-seg:hover .fbh-seg-edit,
+.fbh-seg--hover .fbh-seg-edit,
+.fbh-seg:focus-visible .fbh-seg-edit,
+.fbh-seg-edit:focus-visible {
+    opacity: 1;
+}
+
+.fbh-seg-edit:hover {
+    background: color-mix(in srgb, var(--fbh-range-contrast) 25%, transparent);
+}
+
+.fbh-seg-edit svg {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Precise editor popover                                                     */
+/* -------------------------------------------------------------------------- */
+
+.fbh-editor {
+    position: absolute;
+    z-index: 40;
+    width: 15.5rem;
+    display: grid;
+    gap: 0.625rem;
+    padding: 0.875rem;
+    border: 1px solid var(--fbh-border);
+    border-radius: 0.75rem;
+    background: var(--fbh-surface);
+    box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.35);
+    cursor: default;
+}
+
+.fbh-editor-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--fbh-strong);
+}
+
+.fbh-editor-times {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.fbh-editor-field {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.fbh-editor-field span {
+    font-size: 0.6875rem;
+    color: var(--fbh-muted);
+}
+
+.fbh-editor-field input[type='time'] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3125rem 0.5rem;
+    border: 1px solid var(--fbh-border);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--fbh-strong);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color-scheme: light;
+}
+
+.dark .fbh-editor-field input[type='time'] {
+    color-scheme: dark;
+}
+
+.fbh-editor-field input[type='time']:focus-visible {
+    outline: 2px solid var(--fbh-range);
+    outline-offset: 1px;
+}
+
+.fbh-editor--invalid input[type='time'] {
+    border-color: var(--danger-600, #dc2626);
+}
+
+.fbh-editor-error {
+    font-size: 0.6875rem;
+    color: var(--danger-600, #dc2626);
+}
+
+.dark .fbh-editor-error {
+    color: var(--danger-400, #f87171);
+}
+
+.fbh-editor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.fbh-editor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3125rem 0.625rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.1s ease, filter 0.1s ease;
+}
+
+.fbh-editor-btn svg {
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+.fbh-editor-btn--delete {
+    color: var(--danger-600, #dc2626);
+}
+
+.fbh-editor-btn--delete:hover {
+    background: color-mix(in srgb, var(--danger-600, #dc2626) 10%, transparent);
+}
+
+.dark .fbh-editor-btn--delete {
+    color: var(--danger-400, #f87171);
+}
+
+.fbh-editor-btn--done {
+    background: var(--fbh-range);
+    color: var(--fbh-range-contrast);
+}
+
+.fbh-editor-btn--done:hover {
+    filter: brightness(1.08);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Legend under the grid                                                      */
+/* -------------------------------------------------------------------------- */
+
+.fbh-legend {
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--fbh-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Exceptions & vacations sections                                            */
+/* -------------------------------------------------------------------------- */
+
+.fbh-entry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fbh-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.15s ease;
+}
+
+.fbh-entry:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.dark .fbh-entry:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.fbh-entry-main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.375rem 0.625rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fbh-entry-date {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--fbh-strong);
+    white-space: nowrap;
+}
+
+.fbh-entry-hours {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--fbh-strong);
+    opacity: 0.8;
+}
+
+.fbh-entry-label {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--fbh-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fbh-entry-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex: 0 0 auto;
+}
+
+.fbh-entry-empty {
+    padding: 1rem 0.75rem;
+    border: 1px dashed var(--fbh-border);
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--fbh-muted);
+    text-align: center;
+}
+
+.fbh-add-row {
+    margin-top: 0.75rem;
+}

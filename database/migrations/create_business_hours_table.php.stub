@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('business_hours', function (Blueprint $table): void {
+            $table->id();
+
+            // Identifies the set of opening hours ("default", "shop-paris", ...).
+            $table->string('key')->unique();
+
+            // IANA timezone identifier, null to use the application timezone.
+            $table->string('timezone')->nullable();
+
+            // Whether ranges may overflow past midnight into the next day
+            // (spatie/opening-hours "overflow" flag, e.g. "20:00-02:00").
+            $table->boolean('overflow')->default(false);
+
+            // Weekly hours, exactly as consumed by spatie/opening-hours:
+            // {"monday": ["09:00-12:00", "14:00-18:00"], ...}
+            $table->json('hours');
+
+            // Exceptions, exactly as consumed by spatie/opening-hours: single
+            // dates ("2026-12-25"), yearly recurring dates ("12-25") and date
+            // ranges ("2026-08-01 to 2026-08-15", used for vacation periods),
+            // each mapping to hours or to {"hours": [...], "data": "label"}.
+            $table->json('exceptions');
+
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('business_hours');
+    }
+};
