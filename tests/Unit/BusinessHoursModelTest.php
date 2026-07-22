@@ -91,6 +91,19 @@ it('applies the stored timezone when querying', function (): void {
         ->and($openingHours->isOpenAt(new DateTime('2026-07-20 23:00', new DateTimeZone('UTC'))))->toBeFalse();
 });
 
+it('guards against mass assignment of unknown attributes', function (): void {
+    $record = BusinessHours::create([
+        'key' => 'shop',
+        'hours' => [],
+        'exceptions' => [],
+        'id' => 999,
+        'created_at' => '1990-01-01 00:00:00',
+    ]);
+
+    expect($record->id)->not->toBe(999)
+        ->and($record->created_at->year)->not->toBe(1990);
+});
+
 it('exposes a static shortcut to the spatie object', function (): void {
     expect(BusinessHours::openingHours('missing'))->toBeNull();
 

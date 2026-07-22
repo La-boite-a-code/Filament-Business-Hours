@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LaBoiteACode\FilamentBusinessHours\Support;
 
+use InvalidArgumentException;
+
 /**
  * One entry of a spatie/opening-hours "exceptions" map, in a shape the page
  * can edit: a single date, a yearly recurring date or a period (vacation),
@@ -32,6 +34,10 @@ final class ExceptionEntry
      */
     public static function date(string $date, array $hours = [], ?string $label = null): self
     {
+        if (! self::isFullDate($date)) {
+            throw new InvalidArgumentException(sprintf('"%s" is not a valid "Y-m-d" date.', $date));
+        }
+
         return new self(ExceptionType::Date, $date, null, null, array_values($hours), self::presence($label));
     }
 
@@ -40,11 +46,23 @@ final class ExceptionEntry
      */
     public static function recurring(string $monthDay, array $hours = [], ?string $label = null): self
     {
+        if (! self::isMonthDay($monthDay)) {
+            throw new InvalidArgumentException(sprintf('"%s" is not a valid "m-d" month and day.', $monthDay));
+        }
+
         return new self(ExceptionType::Recurring, $monthDay, null, null, array_values($hours), self::presence($label));
     }
 
     public static function period(string $from, string $until, ?string $label = null): self
     {
+        if (! self::isFullDate($from) || ! self::isFullDate($until)) {
+            throw new InvalidArgumentException(sprintf('"%s to %s" is not a valid "Y-m-d to Y-m-d" period.', $from, $until));
+        }
+
+        if ($until < $from) {
+            throw new InvalidArgumentException(sprintf('The period "%s to %s" ends before it starts.', $from, $until));
+        }
+
         return new self(ExceptionType::Period, null, $from, $until, [], self::presence($label));
     }
 
@@ -183,8 +201,10 @@ final class ExceptionEntry
             return false;
         }
 
-        // An arbitrary leap year, so that "02-29" is accepted.
-        return checkdate((int) $matches[1], (int) $matches[2], 2024);
+        // A non-leap year on purpose: spatie/opening-hours itself rejects
+        // "02-29" as a recurring exception, so accepting it here would only
+        // trade a readable error for a cryptic one at save time.
+        return checkdate((int) $matches[1], (int) $matches[2], 2023);
     }
 
     private static function presence(?string $value): ?string

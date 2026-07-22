@@ -34,6 +34,9 @@ return [
         'hint' => 'Glissez sur une journée pour créer une plage, déplacez une plage pour la décaler, étirez ses bords pour la redimensionner. Cliquez sur une plage (ou clic droit, ou touche Entrée) pour saisir des horaires précis ou la supprimer.',
         'closed' => 'Fermé',
         'overnight' => '(+1)',
+        'total_hours' => ':hours h',
+        'total_hours_minutes' => ':hours h :minutes',
+        'add_range' => 'Ajouter une plage',
         'copy_day' => 'Copier ce jour vers…',
         'copy_day_heading' => 'Copier les horaires de « :day » vers…',
         'copy' => 'Copier',
@@ -112,6 +115,10 @@ return [
         'invalid_title' => 'Les horaires n’ont pas pu être enregistrés',
         'conflicting_dates' => 'Le :date est couvert deux fois (par « :first » et « :second »). Retirez l’un des deux.',
         'invalid_period' => 'Une période de vacances comporte une date invalide.',
+        'period_too_long' => 'Une période de vacances ne peut pas dépasser :max jours.',
+        'too_many_entries' => 'Trop de journées exceptionnelles et de périodes de vacances (au plus :max au total).',
+        'too_many_ranges' => 'Trop de plages le :day (au plus :max).',
+        'invalid_timezone' => '« :timezone » n’est pas un fuseau horaire valide.',
     ],
 
 ];

@@ -34,6 +34,9 @@ return [
         'hint' => 'Drag on a day to create a range, drag a range to move it, drag its edges to resize it. Click a range (or right-click, or press Enter) to type precise times or delete it.',
         'closed' => 'Closed',
         'overnight' => '(+1)',
+        'total_hours' => ':hours h',
+        'total_hours_minutes' => ':hours h :minutes',
+        'add_range' => 'Add a range',
         'copy_day' => 'Copy this day to…',
         'copy_day_heading' => 'Copy ":day" hours to…',
         'copy' => 'Copy',
@@ -112,6 +115,10 @@ return [
         'invalid_title' => 'The hours could not be saved',
         'conflicting_dates' => ':date is covered twice (by ":first" and ":second"). Remove one of them.',
         'invalid_period' => 'A vacation period has an invalid date.',
+        'period_too_long' => 'A vacation period may not exceed :max days.',
+        'too_many_entries' => 'Too many exceptional dates and vacation periods (at most :max in total).',
+        'too_many_ranges' => 'Too many ranges on :day (at most :max).',
+        'invalid_timezone' => '":timezone" is not a valid timezone.',
     ],
 
 ];

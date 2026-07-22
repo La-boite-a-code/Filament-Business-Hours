@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filament Business Hours - banner</title>
+<style>
+  @font-face { font-family: "Satoshi"; src: local("Satoshi-Light");  font-weight: 300; font-style: normal; }
+  @font-face { font-family: "Satoshi"; src: local("Satoshi-Regular"); font-weight: 400; font-style: normal; }
+  @font-face { font-family: "Satoshi"; src: local("Satoshi-Medium"); font-weight: 500; font-style: normal; }
+  @font-face { font-family: "Satoshi"; src: local("Satoshi-Bold");   font-weight: 700; font-style: normal; }
+  @font-face { font-family: "Satoshi"; src: local("Satoshi-Black");  font-weight: 900; font-style: normal; }
+
+  :root{
+    --paper:#FAF8F4;
+    --paper-2:#F2EEE6;
+    --ink:#17150F;
+    --ink-2:#514B41;
+    --muted:#8A8172;
+    --line:#E6E0D4;
+    --line-soft:#EFEAE0;
+    --amber:#F59E0B;
+    --amber-deep:#B45309;
+    --mark:#FDE68A;
+
+    /* Filament / product UI tokens (light) */
+    --ui-line:#E5E7EB;
+    --ui-line-2:#F3F4F6;
+    --ui-text:#111827;
+    --ui-text-2:#1F2937;
+    --ui-muted:#6B7280;
+    --ui-muted-2:#9CA3AF;
+    --ui-surface:#F9FAFB;
+
+    /* grid mock geometry */
+    --row:38px;
+    --cgap:4px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{ width:1280px; height:720px; overflow:hidden; }
+
+  body{
+    position:relative;
+    background:var(--paper);
+    font-family:"Satoshi", -apple-system, BlinkMacSystemFont, sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:geometricPrecision;
+  }
+
+  /* ---------- atmosphere ---------- */
+  .grid{
+    position:absolute; inset:0;
+    background-image:radial-gradient(circle at 1px 1px, rgba(23,21,15,.13) 1px, transparent 0);
+    background-size:22px 22px;
+    -webkit-mask-image:linear-gradient(115deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.16) 46%, transparent 72%);
+            mask-image:linear-gradient(115deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.16) 46%, transparent 72%);
+  }
+  .glow-a{
+    position:absolute; width:900px; height:900px; right:-230px; top:-380px;
+    background:radial-gradient(circle, rgba(245,158,11,.20) 0%, rgba(245,158,11,.07) 42%, transparent 66%);
+  }
+  .glow-b{
+    position:absolute; width:760px; height:760px; left:-300px; bottom:-380px;
+    background:radial-gradient(circle, rgba(180,83,9,.09) 0%, transparent 64%);
+  }
+  .wash{
+    position:absolute; inset:0;
+    background:linear-gradient(100deg, transparent 46%, rgba(228,219,202,.34) 100%);
+  }
+
+  /* ---------- left column ---------- */
+  .stage{ position:relative; width:1280px; height:720px; }
+
+  .copy{
+    position:absolute; left:74px; top:0; bottom:0; width:502px;
+    display:flex; flex-direction:column; justify-content:center;
+    z-index:3;
+  }
+
+  .eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-size:12.5px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
+    color:var(--amber-deep);
+    margin-bottom:22px;
+  }
+  .eyebrow .dot{
+    width:7px; height:7px; border-radius:50%; background:var(--amber);
+    box-shadow:0 0 0 4px rgba(245,158,11,.16);
+  }
+  .eyebrow .sep{ color:#D9CDB6; font-weight:500; letter-spacing:0; }
+
+  h1{
+    font-weight:900; font-size:82px; line-height:.92; letter-spacing:-.035em;
+    color:var(--ink);
+  }
+  h1 .l2{ display:block; }
+
+  .sub{
+    margin-top:24px;
+    font-size:20.5px; line-height:1.5; font-weight:500; color:var(--ink-2);
+    max-width:470px; letter-spacing:-.006em;
+  }
+  .sub mark{
+    background:var(--mark); color:#3A2A05; border-radius:3px;
+    padding:.06em .22em; margin-inline:-.06em;
+    box-decoration-break:clone; -webkit-box-decoration-break:clone;
+  }
+
+  .pills{ display:flex; gap:9px; margin-top:32px; flex-wrap:wrap; }
+  .pill{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:8px 13px 8px 11px;
+    background:rgba(255,255,255,.85);
+    border:1px solid var(--line);
+    border-radius:999px;
+    font-size:13px; font-weight:600; color:var(--ink-2); letter-spacing:-.005em;
+    box-shadow:0 1px 2px rgba(23,21,15,.03);
+  }
+  .pill svg{ width:14px; height:14px; stroke:var(--amber-deep); fill:none; stroke-width:2; }
+
+  .cmd{
+    margin-top:34px;
+    display:inline-flex; align-items:center; gap:11px;
+    align-self:flex-start;
+    padding:12px 17px;
+    background:#FFFFFF;
+    border:1px solid var(--line);
+    border-radius:11px;
+    box-shadow:0 1px 2px rgba(23,21,15,.04), 0 8px 18px -12px rgba(23,21,15,.18);
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:13.5px; color:#332E24; letter-spacing:-.01em;
+  }
+  .cmd .prompt{ color:var(--amber); font-weight:700; }
+  .cmd .dim{ color:var(--muted); }
+
+  /* ---------- right: UI mock ---------- */
+  .mock{ position:absolute; inset:0; z-index:2; }
+
+  .card{
+    position:absolute;
+    background:#fff;
+    border:1px solid var(--ui-line);
+    border-radius:14px;
+    overflow:hidden;
+  }
+
+  /* back card - exceptional dates & vacations */
+  .exc-card{
+    left:712px; top:38px; width:492px; height:308px;
+    box-shadow:0 1px 2px rgba(23,21,15,.04), 0 16px 34px -20px rgba(23,21,15,.20);
+  }
+  .exc-head{ padding:16px 20px 12px; border-bottom:1px solid var(--ui-line-2); }
+  .exc-title{ font-size:14.5px; font-weight:700; color:var(--ui-text); letter-spacing:-.012em; }
+  .exc-sub{ margin-top:4px; font-size:11.5px; color:var(--ui-muted); }
+  .exc-rows{ padding:8px 10px; }
+  .exc-row{
+    display:flex; align-items:center; gap:9px;
+    padding:9px 10px; border-radius:8px;
+  }
+  .exc-row + .exc-row{ margin-top:1px; }
+  .exc-date{ font-size:12.5px; font-weight:700; color:var(--ui-text); letter-spacing:-.012em; white-space:nowrap; }
+  .exc-hours{
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:11px; color:#374151;
+  }
+  .exc-label{ font-size:11.5px; font-style:italic; color:var(--ui-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tag{
+    display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px;
+    background:#F3F4F6; border:1px solid #E5E7EB;
+    font-size:10.5px; font-weight:600; color:#4B5563; white-space:nowrap;
+  }
+  .tag.red{ background:#FEF2F2; border-color:#FECACA; color:#B91C1C; }
+  .tag.blue{ background:#EFF6FF; border-color:#BFDBFE; color:#1D4ED8; }
+
+  /* front card - the weekly grid */
+  .grid-card{
+    left:606px; top:212px; width:648px; height:610px;
+    border-radius:16px;
+    box-shadow:
+      0 2px 4px rgba(23,21,15,.05),
+      0 30px 56px -22px rgba(23,21,15,.26),
+      -26px 44px 92px -46px rgba(23,21,15,.38);
+  }
+  .g-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    padding:17px 20px 13px;
+  }
+  .g-title{ font-size:15.5px; font-weight:700; color:var(--ui-text); letter-spacing:-.014em; }
+  .g-meta{ margin-top:4px; font-size:11.5px; color:var(--ui-muted); }
+  .g-meta i{ font-style:normal; color:#D1D5DB; margin:0 6px; }
+  .g-actions{ display:flex; align-items:center; gap:8px; }
+  .btn-ghost{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px; border-radius:8px; border:1px solid var(--ui-line);
+    background:#fff;
+  }
+  .btn-ghost svg{ width:15px; height:15px; stroke:#6B7280; fill:none; stroke-width:1.8; }
+  .btn-save{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:7px 14px; border-radius:8px;
+    background:var(--amber); color:#451A03;
+    font-size:12.5px; font-weight:700; letter-spacing:-.008em;
+    box-shadow:0 1px 2px rgba(180,83,9,.25);
+  }
+  .btn-save svg{ width:13px; height:13px; stroke:#451A03; fill:none; stroke-width:2.4; }
+
+  /* week grid */
+  .wk{
+    margin:0 20px;
+    border:1px solid var(--ui-line); border-radius:10px;
+    overflow:hidden;
+    display:grid; grid-template-columns:46px repeat(7, 1fr);
+  }
+  .wk-corner{ background:#fff; border-bottom:1px solid var(--ui-line-2); }
+  .wk-dh{
+    padding:8px 8px 7px; background:#fff; border-bottom:1px solid var(--ui-line-2);
+  }
+  .wk-dh .d{ display:block; font-size:11.5px; font-weight:700; color:var(--ui-text); letter-spacing:-.01em; }
+  .wk-dh .t{ display:block; margin-top:1px; font-size:9.5px; color:var(--ui-muted); }
+  .wk-dh.today .d{ color:var(--amber-deep); }
+
+  .wk-gutter{ background:#fff; }
+  .wk-gutter .h{
+    height:var(--row);
+    display:flex; align-items:center; justify-content:flex-end;
+    padding-right:8px;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:9.5px; color:var(--ui-muted-2); font-variant-numeric:tabular-nums;
+  }
+
+  .wk-col{ position:relative; }
+  .wk-col .cell{
+    box-sizing:border-box; height:var(--row);
+    padding:calc(var(--cgap) / 2) 5px;
+  }
+  .wk-col .cell::before{
+    content:''; display:block; box-sizing:border-box; height:100%;
+    border:1px solid var(--ui-line); border-radius:6px; background:#fff;
+  }
+  .wk-col.today .cell::before{ background:#FFFDF6; }
+
+  .seg{
+    position:absolute; left:5px; right:5px;
+    border-radius:6px; background:var(--amber);
+  }
+  .seg-badge{
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    padding:0 5px; border:1px solid var(--ui-line); border-radius:5px;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.08);
+    font-size:9px; font-weight:700; color:var(--ui-text);
+    font-variant-numeric:tabular-nums; line-height:15px;
+  }
+
+  /* floating range editor */
+  .editor{
+    position:absolute; left:964px; top:318px; width:212px; z-index:4;
+    background:#fff; border:1px solid var(--ui-line); border-radius:12px;
+    box-shadow:0 2px 4px rgba(23,21,15,.06), 0 22px 44px -18px rgba(23,21,15,.30);
+    padding:13px 14px;
+  }
+  .ed-day{ font-size:12.5px; font-weight:700; color:var(--ui-text); letter-spacing:-.012em; }
+  .ed-times{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:9px; }
+  .ed-field span{ display:block; font-size:9.5px; color:var(--ui-muted); margin-bottom:3px; }
+  .ed-field .in{
+    display:flex; align-items:center;
+    padding:5px 8px; border:1px solid var(--ui-line); border-radius:7px;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    font-size:11.5px; color:var(--ui-text); font-variant-numeric:tabular-nums;
+  }
+  .ed-field .in.focus{
+    border-color:#FCD34D; box-shadow:0 0 0 3px rgba(245,158,11,.18);
+  }
+  .ed-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:11px; }
+  .ed-del{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:#DC2626; }
+  .ed-del svg{ width:11px; height:11px; stroke:#DC2626; fill:none; stroke-width:2; }
+  .ed-ok{
+    padding:5px 12px; border-radius:7px; background:var(--amber);
+    font-size:10.5px; font-weight:700; color:#451A03;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="wash"></div>
+  <div class="grid"></div>
+  <div class="glow-a"></div>
+  <div class="glow-b"></div>
+
+  <!-- ============ UI MOCK ============ -->
+  <div class="mock">
+
+    <!-- exceptional dates & vacations -->
+    <div class="card exc-card">
+      <div class="exc-head">
+        <div class="exc-title">Exceptional dates &amp; vacations</div>
+        <div class="exc-sub">Closures, special hours and holiday periods</div>
+      </div>
+      <div class="exc-rows">
+        <div class="exc-row">
+          <span class="exc-date">3 &#8594; 16 August 2026</span>
+          <span class="tag">14 days</span>
+          <span class="exc-label">Summer break</span>
+        </div>
+        <div class="exc-row">
+          <span class="exc-date">25 December</span>
+          <span class="tag blue">Every year</span>
+          <span class="tag red">Closed</span>
+          <span class="exc-label">Christmas</span>
+        </div>
+        <div class="exc-row">
+          <span class="exc-date">24 December 2026</span>
+          <span class="exc-hours">10:00-16:00</span>
+          <span class="exc-label">Christmas Eve</span>
+        </div>
+        <div class="exc-row">
+          <span class="exc-date">1 May</span>
+          <span class="tag blue">Every year</span>
+          <span class="tag red">Closed</span>
+          <span class="exc-label">Labour day</span>
+        </div>
+        <div class="exc-row">
+          <span class="exc-date">21 &#8594; 27 December 2026</span>
+          <span class="tag">7 days</span>
+          <span class="exc-label">Winter break</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- weekly grid -->
+    <div class="card grid-card">
+      <div class="g-head">
+        <div>
+          <div class="g-title">Weekly hours</div>
+          <div class="g-meta">Europe/Paris<i>&#183;</i>15 min steps</div>
+        </div>
+        <div class="g-actions">
+          <span class="btn-ghost"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg></span>
+          <span class="btn-save">
+            <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+            Save
+          </span>
+        </div>
+      </div>
+
+      <div class="wk">
+        <div class="wk-corner"></div>
+        <div class="wk-dh"><span class="d">Mon</span><span class="t">7 h 30</span></div>
+        <div class="wk-dh today"><span class="d">Tue</span><span class="t">9 h</span></div>
+        <div class="wk-dh"><span class="d">Wed</span><span class="t">Closed</span></div>
+        <div class="wk-dh"><span class="d">Thu</span><span class="t">8 h 15</span></div>
+        <div class="wk-dh"><span class="d">Fri</span><span class="t">7 h</span></div>
+        <div class="wk-dh"><span class="d">Sat</span><span class="t">3 h</span></div>
+        <div class="wk-dh"><span class="d">Sun</span><span class="t">Closed</span></div>
+
+        <div class="wk-gutter">
+          <div class="h">08:00</div><div class="h">09:00</div><div class="h">10:00</div>
+          <div class="h">11:00</div><div class="h">12:00</div><div class="h">13:00</div>
+          <div class="h">14:00</div><div class="h">15:00</div><div class="h">16:00</div>
+          <div class="h">17:00</div><div class="h">18:00</div><div class="h">19:00</div>
+        </div>
+
+        <!-- Monday: 09:00-12:30 and 14:00-18:00 -->
+        <div class="wk-col">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="seg" style="top:40px;height:34px"></div>
+          <div class="seg" style="top:78px;height:34px"></div>
+          <div class="seg" style="top:116px;height:34px"></div>
+          <div class="seg" style="top:154px;height:17px"><span class="seg-badge">30</span></div>
+          <div class="seg" style="top:230px;height:34px"></div>
+          <div class="seg" style="top:268px;height:34px"></div>
+          <div class="seg" style="top:306px;height:34px"></div>
+          <div class="seg" style="top:344px;height:34px"></div>
+        </div>
+
+        <!-- Tuesday (today): 09:00-18:00 -->
+        <div class="wk-col today">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="seg" style="top:40px;height:34px"></div>
+          <div class="seg" style="top:78px;height:34px"></div>
+          <div class="seg" style="top:116px;height:34px"></div>
+          <div class="seg" style="top:154px;height:34px"></div>
+          <div class="seg" style="top:192px;height:34px"></div>
+          <div class="seg" style="top:230px;height:34px"></div>
+          <div class="seg" style="top:268px;height:34px"></div>
+          <div class="seg" style="top:306px;height:34px"></div>
+          <div class="seg" style="top:344px;height:34px"></div>
+        </div>
+
+        <!-- Wednesday: closed -->
+        <div class="wk-col">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <!-- Thursday: 09:30-17:45 -->
+        <div class="wk-col">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="seg" style="top:57px;height:17px"><span class="seg-badge">30</span></div>
+          <div class="seg" style="top:78px;height:34px"></div>
+          <div class="seg" style="top:116px;height:34px"></div>
+          <div class="seg" style="top:154px;height:34px"></div>
+          <div class="seg" style="top:192px;height:34px"></div>
+          <div class="seg" style="top:230px;height:34px"></div>
+          <div class="seg" style="top:268px;height:34px"></div>
+          <div class="seg" style="top:306px;height:34px"></div>
+          <div class="seg" style="top:344px;height:25px"><span class="seg-badge">45</span></div>
+        </div>
+
+        <!-- Friday: 09:00-16:00 -->
+        <div class="wk-col">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="seg" style="top:40px;height:34px"></div>
+          <div class="seg" style="top:78px;height:34px"></div>
+          <div class="seg" style="top:116px;height:34px"></div>
+          <div class="seg" style="top:154px;height:34px"></div>
+          <div class="seg" style="top:192px;height:34px"></div>
+          <div class="seg" style="top:230px;height:34px"></div>
+          <div class="seg" style="top:268px;height:34px"></div>
+        </div>
+
+        <!-- Saturday: 10:00-13:00 -->
+        <div class="wk-col">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="seg" style="top:78px;height:34px"></div>
+          <div class="seg" style="top:116px;height:34px"></div>
+          <div class="seg" style="top:154px;height:34px"></div>
+        </div>
+
+        <!-- Sunday: closed -->
+        <div class="wk-col">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- floating range editor -->
+    <div class="editor">
+      <div class="ed-day">Thursday</div>
+      <div class="ed-times">
+        <div class="ed-field">
+          <span>From</span>
+          <div class="in focus">09:30</div>
+        </div>
+        <div class="ed-field">
+          <span>Until</span>
+          <div class="in">17:45</div>
+        </div>
+      </div>
+      <div class="ed-foot">
+        <span class="ed-del">
+          <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.2v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+          Delete
+        </span>
+        <span class="ed-ok">Done</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COPY ============ -->
+  <div class="copy">
+    <div class="eyebrow">
+      <span class="dot"></span>
+      <span>Filament plugin</span>
+      <span class="sep">/</span>
+      <span>v4 &amp; v5</span>
+    </div>
+
+    <h1>Business<span class="l2">Hours</span></h1>
+
+    <p class="sub">
+      Drag your opening hours onto a weekly planner, with exceptional
+      closures and vacations, stored straight in the
+      <mark>spatie/opening-hours</mark> format.
+    </p>
+
+    <div class="pills">
+      <span class="pill">
+        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+        Drag, resize, fine-tune
+      </span>
+      <span class="pill">
+        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+        Closures &amp; vacations
+      </span>
+      <span class="pill">
+        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
+        spatie native storage
+      </span>
+    </div>
+
+    <div class="cmd">
+      <span class="prompt">$</span>
+      <span><span class="dim">composer require</span> laboiteacode/filament-business-hours</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

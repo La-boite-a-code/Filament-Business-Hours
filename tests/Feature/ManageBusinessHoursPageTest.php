@@ -247,3 +247,117 @@ it('restricts access through the plugin callback', function (): void {
 
     expect(ManageBusinessHours::canAccess())->toBeFalse();
 });
+
+it('edits and removes vacation periods by index', function (): void {
+    BusinessHours::create([
+        'key' => 'default',
+        'hours' => [],
+        'exceptions' => ['2026-08-03 to 2026-08-16' => ['hours' => [], 'data' => 'Summer break']],
+    ]);
+
+    $component = Livewire::test(ManageBusinessHours::class)
+        ->callAction('editVacation', data: [
+            'from' => '2026-08-10',
+            'until' => '2026-08-20',
+            'label' => 'Moved break',
+        ], arguments: ['index' => 0])
+        ->assertHasNoActionErrors();
+
+    expect($component->get('vacations'))->toBe([
+        ['from' => '2026-08-10', 'until' => '2026-08-20', 'label' => 'Moved break'],
+    ]);
+
+    $component
+        ->callAction('removeVacation', arguments: ['index' => 0])
+        ->assertSet('vacations', []);
+});
+
+it('refuses a vacation ending before it starts', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->callAction('addVacation', data: [
+            'from' => '2026-08-10',
+            'until' => '2026-08-01',
+        ])
+        ->assertHasActionErrors(['until']);
+});
+
+it('accepts a single day vacation', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->set('hours.monday', ['09:00-12:00'])
+        ->callAction('addVacation', data: ['from' => '2026-07-27', 'until' => '2026-07-27'])
+        ->call('save');
+
+    $record = BusinessHours::query()->where('key', 'default')->firstOrFail();
+
+    expect($record->exceptions)->toHaveKey('2026-07-27 to 2026-07-27')
+        ->and($record->toOpeningHours()->isOpenAt(new DateTime('2026-07-27 10:00')))->toBeFalse()
+        ->and($record->toOpeningHours()->isOpenAt(new DateTime('2026-08-03 10:00')))->toBeTrue();
+});
+
+it('keeps exceptional dates sorted, recurring ones last', function (): void {
+    $component = Livewire::test(ManageBusinessHours::class)
+        ->callAction('addException', data: ['date' => '2026-12-25', 'recurring' => false, 'closed' => true])
+        ->callAction('addException', data: ['date' => '2026-05-01', 'recurring' => true, 'closed' => true])
+        ->callAction('addException', data: ['date' => '2026-02-14', 'recurring' => false, 'closed' => true]);
+
+    expect(array_column($component->get('exceptions'), 'key'))->toBe(['2026-02-14', '2026-12-25', '05-01']);
+});
+
+it('rejects february 29th as a recurring closure, which spatie cannot represent', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->callAction('addException', data: ['date' => '2024-02-29', 'recurring' => true, 'closed' => true])
+        ->call('save')
+        ->assertNotified(trans('filament-business-hours::filament-business-hours.save.invalid_title'));
+
+    expect(BusinessHours::query()->count())->toBe(0);
+});
+
+it('round-trips ranges ending at midnight', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->set('hours.saturday', ['20:00-24:00'])
+        ->call('save')
+        ->assertNotified(trans('filament-business-hours::filament-business-hours.save.success_title'));
+
+    $record = BusinessHours::query()->where('key', 'default')->firstOrFail();
+
+    expect($record->hours['saturday'])->toBe(['20:00-24:00'])
+        ->and($record->toOpeningHours()->isOpenAt(new DateTime('2026-07-25 23:30')))->toBeTrue();
+});
+
+it('lets a vacation and a yearly recurring closure cover the same date', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->callAction('addVacation', data: ['from' => '2026-08-01', 'until' => '2026-08-15'])
+        ->callAction('addException', data: ['date' => '2026-08-10', 'recurring' => true, 'closed' => true])
+        ->call('save')
+        ->assertNotified(trans('filament-business-hours::filament-business-hours.save.success_title'));
+
+    $record = BusinessHours::query()->where('key', 'default')->firstOrFail();
+
+    expect($record->exceptions)->toHaveKey('2026-08-01 to 2026-08-15')
+        ->and($record->exceptions)->toHaveKey('08-10');
+});
+
+it('copies a day by value, not by reference', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->set('hours.monday', ['09:00-12:00'])
+        ->callAction('copyDay', data: ['targets' => ['tuesday']], arguments: ['day' => 'monday'])
+        ->call('clearDay', 'tuesday')
+        ->assertSet('hours.tuesday', [])
+        ->assertSet('hours.monday', ['09:00-12:00']);
+});
+
+it('highlights the current day column', function (): void {
+    Livewire::test(ManageBusinessHours::class)
+        ->assertSee('fbh-day-head--today', false)
+        ->assertSee('fbh-col--today', false);
+});
+
+it('manages the record configured on the plugin', function (): void {
+    FilamentBusinessHoursPlugin::get()->record('shop-paris');
+
+    Livewire::test(ManageBusinessHours::class)
+        ->set('hours.monday', ['09:00-12:00'])
+        ->call('save');
+
+    expect(BusinessHours::query()->pluck('key')->all())->toBe(['shop-paris']);
+});

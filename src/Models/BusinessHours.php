@@ -27,7 +27,13 @@ class BusinessHours extends Model
 {
     protected $table = 'business_hours';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'key',
+        'timezone',
+        'overflow',
+        'hours',
+        'exceptions',
+    ];
 
     /**
      * @return array<string, string>

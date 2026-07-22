@@ -16,6 +16,8 @@ vacation periods and timezones. Everything is stored **exactly in the format
 consumed by [spatie/opening-hours](https://github.com/spatie/opening-hours)**,
 so your application can query the hours with the library you already know.
 
+![Filament Business Hours](art/banner.jpg)
+
 ## Features
 
 - **A real weekly grid.** 7 days of stacked hour cells, planner style, themed
@@ -210,6 +212,25 @@ it with a Gate ability in the config:
 
 or with the `->canAccessUsing()` closure shown above, which takes precedence.
 
+### Validation and limits
+
+Nothing reaches the database without being validated. On save, the page:
+
+- normalizes every range (format check, chronological sort, merge of
+  overlapping or touching ranges);
+- refuses dates covered twice (an exceptional date inside a vacation period,
+  two overlapping vacation periods, ...) with a readable message;
+- validates the timezone;
+- validates the whole payload by actually instantiating
+  `Spatie\OpeningHours\OpeningHours`, so a stored record is queryable by
+  definition.
+
+Because the Livewire state is client-writable, hard caps also protect the
+server against crafted payloads: at most 100 ranges per day, 500 exceptional
+dates and vacation periods in total, 1100 days per vacation period, and
+255 characters per label. Malformed state degrades gracefully instead of
+breaking the page render.
+
 ## Database
 
 One table, one row per set of hours:
@@ -237,7 +258,8 @@ recently.
 
 ## Credits
 
-- [Alexandre Ribes](https://github.com/RibesAlexandre)
+- [Alexandre Ribes](https://alexandre-ribes.fr)
+- [La Boîte à Code](https://laboiteacode.fr)
 - [Spatie](https://github.com/spatie) for
   [spatie/opening-hours](https://github.com/spatie/opening-hours)
 

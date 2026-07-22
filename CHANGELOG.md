@@ -2,6 +2,30 @@
 
 All notable changes to `laboiteacode/filament-business-hours` will be documented in this file.
 
+## v0.2.0 - 2026-07-22
+
+Hardening and quality release.
+
+- Security hardening of the client-writable Livewire state: hard caps
+  (100 ranges per day, 500 exception and vacation entries, 1100 days per
+  vacation period, 255 characters per label), server-side timezone
+  validation, explicit mass assignment whitelist on the model, input
+  validation in the ExceptionEntry factories, and defensive rendering so a
+  malformed state can no longer break the page.
+- Alignment with spatie/opening-hours: February 29th is rejected as a yearly
+  recurring date with a readable message instead of a cryptic one.
+- Code review fixes: the exception and vacation edit modals no longer crash
+  on malformed state, the grid's inline editor guards against detached
+  layout containers, clicks at the very bottom of a column now create a
+  range, and per-day totals are translatable.
+- Accessibility: a keyboard-reachable "add a range" button in each day
+  header creates a range on the first free hour and opens the precise
+  editor, so ranges can be created without a pointer.
+- Test suite extended from 55 to 112 tests (370 assertions), including a
+  dedicated crafted-payload suite and full plugin configuration coverage.
+- Marketing banners in `art/`, banner and a "Validation and limits" section
+  in the README, updated credits.
+
 ## v0.1.0 - 2026-07-22
 
 Initial development release.

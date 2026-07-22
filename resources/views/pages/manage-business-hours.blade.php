@@ -37,6 +37,8 @@
                     texts: @js([
                         'closed' => __('filament-business-hours::filament-business-hours.grid.closed'),
                         'overnight' => __('filament-business-hours::filament-business-hours.grid.overnight'),
+                        'totalHours' => __('filament-business-hours::filament-business-hours.grid.total_hours'),
+                        'totalHoursMinutes' => __('filament-business-hours::filament-business-hours.grid.total_hours_minutes'),
                         'edit' => __('filament-business-hours::filament-business-hours.grid.editor.edit'),
                         'invalid' => __('filament-business-hours::filament-business-hours.grid.editor.invalid'),
                     ]),
@@ -54,6 +56,15 @@
                                 </div>
 
                                 <div class="fbh-day-actions">
+                                    <x-filament::icon-button
+                                        icon="heroicon-o-plus"
+                                        color="gray"
+                                        size="sm"
+                                        :label="__('filament-business-hours::filament-business-hours.grid.add_range')"
+                                        :tooltip="__('filament-business-hours::filament-business-hours.grid.add_range')"
+                                        x-on:click="addRange('{{ $day }}')"
+                                    />
+
                                     <x-filament::icon-button
                                         icon="heroicon-o-document-duplicate"
                                         color="gray"
@@ -234,31 +245,25 @@
 
             <ul role="list" class="fbh-entry-list">
                 @forelse ($this->exceptions as $index => $exception)
-                    <li class="fbh-entry" wire:key="fbh-exception-{{ $index }}-{{ $exception['key'] }}">
+                    <li class="fbh-entry" wire:key="fbh-exception-{{ $index }}-{{ $exception['key'] ?? '' }}">
                         <div class="fbh-entry-main">
-                            <span class="fbh-entry-date">
-                                @if ($exception['recurring'])
-                                    {{ \Illuminate\Support\Carbon::createFromFormat('Y-m-d', '2024-'.$exception['key'])->translatedFormat('j F') }}
-                                @else
-                                    {{ \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $exception['key'])->translatedFormat('j F Y') }}
-                                @endif
-                            </span>
+                            <span class="fbh-entry-date">{{ $this->exceptionDateLabel($exception) }}</span>
 
-                            @if ($exception['recurring'])
+                            @if ($exception['recurring'] ?? false)
                                 <x-filament::badge color="info" size="sm">
                                     {{ __('filament-business-hours::filament-business-hours.exceptions.recurring_badge') }}
                                 </x-filament::badge>
                             @endif
 
-                            @if ($exception['closed'])
+                            @if ($exception['closed'] ?? true)
                                 <x-filament::badge color="danger" size="sm">
                                     {{ __('filament-business-hours::filament-business-hours.exceptions.closed_badge') }}
                                 </x-filament::badge>
                             @else
-                                <span class="fbh-entry-hours">{{ implode(' · ', $exception['hours']) }}</span>
+                                <span class="fbh-entry-hours">{{ $this->exceptionHoursLabel($exception) }}</span>
                             @endif
 
-                            @if ($exception['label'])
+                            @if ($exception['label'] ?? null)
                                 <span class="fbh-entry-label">{{ $exception['label'] }}</span>
                             @endif
                         </div>
@@ -317,26 +322,19 @@
 
             <ul role="list" class="fbh-entry-list">
                 @forelse ($this->vacations as $index => $vacation)
-                    @php
-                        $vacationFrom = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $vacation['from']);
-                        $vacationUntil = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $vacation['until']);
-                        $vacationDays = (int) $vacationFrom->diffInDays($vacationUntil) + 1;
-                    @endphp
+                    @php($vacationDays = $this->vacationDaysCount($vacation))
 
-                    <li class="fbh-entry" wire:key="fbh-vacation-{{ $index }}-{{ $vacation['from'] }}">
+                    <li class="fbh-entry" wire:key="fbh-vacation-{{ $index }}-{{ $vacation['from'] ?? '' }}">
                         <div class="fbh-entry-main">
-                            <span class="fbh-entry-date">
-                                {{ __('filament-business-hours::filament-business-hours.vacations.range', [
-                                    'from' => $vacationFrom->translatedFormat('j F Y'),
-                                    'until' => $vacationUntil->translatedFormat('j F Y'),
-                                ]) }}
-                            </span>
+                            <span class="fbh-entry-date">{{ $this->vacationRangeLabel($vacation) }}</span>
 
-                            <x-filament::badge color="gray" size="sm">
-                                {{ trans_choice('filament-business-hours::filament-business-hours.vacations.days_count', $vacationDays, ['count' => $vacationDays]) }}
-                            </x-filament::badge>
+                            @if ($vacationDays !== null)
+                                <x-filament::badge color="gray" size="sm">
+                                    {{ trans_choice('filament-business-hours::filament-business-hours.vacations.days_count', $vacationDays, ['count' => $vacationDays]) }}
+                                </x-filament::badge>
+                            @endif
 
-                            @if ($vacation['label'])
+                            @if ($vacation['label'] ?? null)
                                 <span class="fbh-entry-label">{{ $vacation['label'] }}</span>
                             @endif
                         </div>

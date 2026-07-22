@@ -34,6 +34,9 @@ return [
         'hint' => 'Arrastra sobre un día para crear una franja, arrastra una franja para moverla, estira sus bordes para redimensionarla. Haz clic en una franja (o clic derecho, o Intro) para escribir horas precisas o eliminarla.',
         'closed' => 'Cerrado',
         'overnight' => '(+1)',
+        'total_hours' => ':hours h',
+        'total_hours_minutes' => ':hours h :minutes',
+        'add_range' => 'Añadir una franja',
         'copy_day' => 'Copiar este día a…',
         'copy_day_heading' => 'Copiar el horario de «:day» a…',
         'copy' => 'Copiar',
@@ -112,6 +115,10 @@ return [
         'invalid_title' => 'No se pudo guardar el horario',
         'conflicting_dates' => 'El :date está cubierto dos veces (por «:first» y «:second»). Elimina uno de los dos.',
         'invalid_period' => 'Un periodo de vacaciones tiene una fecha no válida.',
+        'period_too_long' => 'Un periodo de vacaciones no puede superar los :max días.',
+        'too_many_entries' => 'Demasiados días excepcionales y periodos de vacaciones (como máximo :max en total).',
+        'too_many_ranges' => 'Demasiadas franjas el :day (como máximo :max).',
+        'invalid_timezone' => '«:timezone» no es una zona horaria válida.',
     ],
 
 ];

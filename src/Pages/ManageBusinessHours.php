@@ -18,6 +18,7 @@ use Filament\Pages\Page;
 use Filament\Panel;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use LaBoiteACode\FilamentBusinessHours\FilamentBusinessHoursPlugin;
 use LaBoiteACode\FilamentBusinessHours\Models\BusinessHours;
@@ -31,6 +32,18 @@ use UnitEnum;
 
 class ManageBusinessHours extends Page
 {
+    /**
+     * Hard caps on the client-writable Livewire state, so a crafted payload
+     * cannot make the page expand or store unbounded data.
+     */
+    protected const MAX_RANGES_PER_DAY = 100;
+
+    protected const MAX_ENTRIES = 500;
+
+    protected const MAX_PERIOD_DAYS = 1100;
+
+    protected const MAX_LABEL_LENGTH = 255;
+
     protected string $view = 'filament-business-hours::pages.manage-business-hours';
 
     /**
@@ -44,15 +57,19 @@ class ManageBusinessHours extends Page
     /**
      * Exceptional dates (closures or special hours), in page shape:
      * {key: "Y-m-d"|"m-d", recurring: bool, closed: bool, hours: list<string>, label: ?string}.
+     * Typed loosely because the state is client-writable; consumers must not
+     * trust the shape.
      *
-     * @var array<int, array<string, mixed>>
+     * @var array<int, mixed>
      */
     public array $exceptions = [];
 
     /**
      * Vacation periods, in page shape: {from: "Y-m-d", until: "Y-m-d", label: ?string}.
+     * Typed loosely because the state is client-writable; consumers must not
+     * trust the shape.
      *
-     * @var array<int, array<string, mixed>>
+     * @var array<int, mixed>
      */
     public array $vacations = [];
 
@@ -233,17 +250,32 @@ class ManageBusinessHours extends Page
     public function save(): void
     {
         try {
+            if (count($this->exceptions) + count($this->vacations) + count($this->rawExceptions) > self::MAX_ENTRIES) {
+                throw new InvalidArgumentException(static::trans('save.too_many_entries', [
+                    'max' => self::MAX_ENTRIES,
+                ]));
+            }
+
             $record = $this->resolveRecord();
 
             $hours = [];
 
             foreach (Weekdays::DAYS as $day) {
-                $hours[$day] = HourRanges::normalize((array) ($this->hours[$day] ?? []), $this->overflow);
+                $ranges = (array) ($this->hours[$day] ?? []);
+
+                if (count($ranges) > self::MAX_RANGES_PER_DAY) {
+                    throw new InvalidArgumentException(static::trans('save.too_many_ranges', [
+                        'day' => $this->dayLabel($day),
+                        'max' => self::MAX_RANGES_PER_DAY,
+                    ]));
+                }
+
+                $hours[$day] = HourRanges::normalize($ranges, $this->overflow);
             }
 
             $record->hours = $hours;
             $record->exceptions = $this->compileExceptions();
-            $record->timezone = ($this->timezone !== null && $this->timezone !== '') ? $this->timezone : null;
+            $record->timezone = $this->validatedTimezone();
             $record->overflow = $this->overflow;
 
             $record->toOpeningHours();
@@ -294,15 +326,19 @@ class ManageBusinessHours extends Page
         };
 
         foreach ($this->vacations as $vacation) {
+            if (! is_array($vacation)) {
+                throw new InvalidArgumentException('Malformed vacation entry in the page state.');
+            }
+
             $entry = ExceptionEntry::period(
-                (string) $vacation['from'],
-                (string) $vacation['until'],
+                (string) ($vacation['from'] ?? ''),
+                (string) ($vacation['until'] ?? ''),
                 self::stringOrNull($vacation['label'] ?? null),
             );
 
             $label = $entry->label ?? static::trans('vacations.fallback_label');
 
-            foreach (self::datesBetween($entry->from, $entry->until) as $date) {
+            foreach ($this->datesBetween($entry->from, $entry->until) as $date) {
                 $cover($date, $label);
             }
 
@@ -310,15 +346,19 @@ class ManageBusinessHours extends Page
         }
 
         foreach ($this->exceptions as $exception) {
-            $hours = $exception['closed']
+            if (! is_array($exception)) {
+                throw new InvalidArgumentException('Malformed exception entry in the page state.');
+            }
+
+            $hours = ($exception['closed'] ?? true)
                 ? []
                 : HourRanges::normalize((array) ($exception['hours'] ?? []), $this->overflow);
 
             $label = self::stringOrNull($exception['label'] ?? null);
 
             $entry = ($exception['recurring'] ?? false)
-                ? ExceptionEntry::recurring((string) $exception['key'], $hours, $label)
-                : ExceptionEntry::date((string) $exception['key'], $hours, $label);
+                ? ExceptionEntry::recurring((string) ($exception['key'] ?? ''), $hours, $label)
+                : ExceptionEntry::date((string) ($exception['key'] ?? ''), $hours, $label);
 
             $source = $label ?? $entry->spatieKey();
 
@@ -346,10 +386,11 @@ class ManageBusinessHours extends Page
     {
         // Dated entries first (chronologically), recurring ones last (by month-day).
         usort($this->exceptions, function (array $a, array $b): int {
-            return [$a['recurring'], $a['key']] <=> [$b['recurring'], $b['key']];
+            return [$a['recurring'] ?? false, $a['key'] ?? '']
+                <=> [$b['recurring'] ?? false, $b['key'] ?? ''];
         });
 
-        usort($this->vacations, fn (array $a, array $b): int => $a['from'] <=> $b['from']);
+        usort($this->vacations, fn (array $a, array $b): int => ($a['from'] ?? '') <=> ($b['from'] ?? ''));
     }
 
     /*
@@ -438,7 +479,11 @@ class ManageBusinessHours extends Page
                 'overflow' => $this->overflow,
             ])
             ->action(function (array $data): void {
-                $this->timezone = self::stringOrNull($data['timezone'] ?? null);
+                $timezone = self::stringOrNull($data['timezone'] ?? null);
+
+                $this->timezone = ($timezone !== null && in_array($timezone, $this->timezoneOptions(), true))
+                    ? $timezone
+                    : null;
                 $this->overflow = (bool) ($data['overflow'] ?? false);
             });
     }
@@ -473,23 +518,30 @@ class ManageBusinessHours extends Page
             ->modalHeading(static::trans('exceptions.edit_heading'))
             ->schema($this->exceptionSchema())
             ->fillForm(function (array $arguments): array {
+                // The page state is client-writable: a malformed entry must
+                // prefill an empty form, never crash the mount.
                 $exception = $this->exceptions[$arguments['index'] ?? -1] ?? null;
 
-                if ($exception === null) {
+                if (! is_array($exception)) {
                     return [];
                 }
 
+                $key = (string) ($exception['key'] ?? '');
+
                 return [
-                    'date' => $exception['recurring']
-                        ? now()->format('Y').'-'.$exception['key']
-                        : $exception['key'],
-                    'recurring' => $exception['recurring'],
-                    'closed' => $exception['closed'],
+                    // An arbitrary leap year, so every "m-d" recurring key
+                    // rebuilds into an existing date for the picker.
+                    'date' => ($exception['recurring'] ?? false) ? '2024-'.$key : $key,
+                    'recurring' => (bool) ($exception['recurring'] ?? false),
+                    'closed' => (bool) ($exception['closed'] ?? true),
                     'hours' => array_map(
-                        fn (string $range): array => array_combine(['from', 'until'], explode('-', $range)),
-                        $exception['hours'],
+                        fn (string $range): array => array_combine(['from', 'until'], explode('-', $range, 2)),
+                        array_values(array_filter(
+                            (array) ($exception['hours'] ?? []),
+                            fn ($range): bool => is_string($range) && preg_match('/^\d{2}:\d{2}-\d{2}:\d{2}$/', $range) === 1,
+                        )),
                     ),
-                    'label' => $exception['label'],
+                    'label' => self::stringOrNull($exception['label'] ?? null),
                 ];
             })
             ->action(function (array $arguments, array $data): void {
@@ -617,7 +669,19 @@ class ManageBusinessHours extends Page
             ->label(static::trans('vacations.edit'))
             ->modalHeading(static::trans('vacations.edit_heading'))
             ->schema($this->vacationSchema())
-            ->fillForm(fn (array $arguments): array => $this->vacations[$arguments['index'] ?? -1] ?? [])
+            ->fillForm(function (array $arguments): array {
+                $vacation = $this->vacations[$arguments['index'] ?? -1] ?? null;
+
+                if (! is_array($vacation)) {
+                    return [];
+                }
+
+                return [
+                    'from' => (string) ($vacation['from'] ?? ''),
+                    'until' => (string) ($vacation['until'] ?? ''),
+                    'label' => self::stringOrNull($vacation['label'] ?? null),
+                ];
+            })
             ->action(function (array $arguments, array $data): void {
                 $index = $arguments['index'] ?? null;
 
@@ -698,6 +762,14 @@ class ManageBusinessHours extends Page
             ?? static::plugin()?->getDefaultTimezone()
             ?? (string) config('app.timezone');
 
+        // $timezone is client-writable: an invalid value must not take the
+        // whole render down, only fall back to the application timezone.
+        try {
+            $today = now($effectiveTimezone);
+        } catch (Throwable) {
+            $today = now();
+        }
+
         return [
             'orderedDays' => $this->orderedDays(),
             'dayLabels' => collect(Weekdays::DAYS)
@@ -705,7 +777,7 @@ class ManageBusinessHours extends Page
                 ->all(),
             'slotStep' => static::plugin()?->getSlotStep() ?? 15,
             'effectiveTimezone' => $effectiveTimezone,
-            'today' => strtolower(now($effectiveTimezone)->format('l')),
+            'today' => strtolower($today->format('l')),
         ];
     }
 
@@ -722,6 +794,70 @@ class ManageBusinessHours extends Page
         return in_array($day, Weekdays::DAYS, true)
             ? static::trans("days.{$day}")
             : $day;
+    }
+
+    /**
+     * Human date of an exception entry. Defensive: the page state is
+     * client-writable, so a malformed entry must degrade to raw text instead
+     * of crashing every subsequent render.
+     */
+    public function exceptionDateLabel(mixed $exception): string
+    {
+        if (! is_array($exception)) {
+            return is_scalar($exception) ? (string) $exception : '';
+        }
+
+        $key = (string) ($exception['key'] ?? '');
+
+        try {
+            return ($exception['recurring'] ?? false)
+                ? Carbon::createFromFormat('!Y-m-d', '2024-'.$key)->translatedFormat('j F')
+                : Carbon::createFromFormat('!Y-m-d', $key)->translatedFormat('j F Y');
+        } catch (Throwable) {
+            return $key;
+        }
+    }
+
+    public function exceptionHoursLabel(mixed $exception): string
+    {
+        $hours = is_array($exception) ? (array) ($exception['hours'] ?? []) : [];
+
+        return implode(' · ', array_filter($hours, 'is_string'));
+    }
+
+    public function vacationRangeLabel(mixed $vacation): string
+    {
+        if (! is_array($vacation)) {
+            return is_scalar($vacation) ? (string) $vacation : '';
+        }
+
+        $from = (string) ($vacation['from'] ?? '');
+        $until = (string) ($vacation['until'] ?? '');
+
+        try {
+            return static::trans('vacations.range', [
+                'from' => Carbon::createFromFormat('!Y-m-d', $from)->translatedFormat('j F Y'),
+                'until' => Carbon::createFromFormat('!Y-m-d', $until)->translatedFormat('j F Y'),
+            ]);
+        } catch (Throwable) {
+            return static::trans('vacations.range', ['from' => $from, 'until' => $until]);
+        }
+    }
+
+    public function vacationDaysCount(mixed $vacation): ?int
+    {
+        if (! is_array($vacation)) {
+            return null;
+        }
+
+        try {
+            $from = Carbon::createFromFormat('!Y-m-d', (string) ($vacation['from'] ?? ''));
+            $until = Carbon::createFromFormat('!Y-m-d', (string) ($vacation['until'] ?? ''));
+
+            return ((int) $from->diffInDays($until)) + 1;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /*
@@ -746,7 +882,7 @@ class ManageBusinessHours extends Page
     /**
      * @return list<string>
      */
-    protected static function datesBetween(?string $from, ?string $until): array
+    protected function datesBetween(?string $from, ?string $until): array
     {
         $dates = [];
 
@@ -757,6 +893,15 @@ class ManageBusinessHours extends Page
             throw new InvalidArgumentException(static::trans('save.invalid_period'));
         }
 
+        // Both our expansion and spatie's own date range parsing walk the
+        // period day by day; an absurdly long period must not be allowed to
+        // burn memory and CPU.
+        if ($end->diff($cursor)->days >= self::MAX_PERIOD_DAYS) {
+            throw new InvalidArgumentException(static::trans('save.period_too_long', [
+                'max' => self::MAX_PERIOD_DAYS,
+            ]));
+        }
+
         while ($cursor->format('Y-m-d') <= $end->format('Y-m-d')) {
             $dates[] = $cursor->format('Y-m-d');
             $cursor = $cursor->modify('+1 day');
@@ -765,9 +910,36 @@ class ManageBusinessHours extends Page
         return $dates;
     }
 
+    /**
+     * The timezone about to be stored, or a readable error: an invalid value
+     * would otherwise only blow up later, deep inside date handling.
+     */
+    protected function validatedTimezone(): ?string
+    {
+        $timezone = self::stringOrNull($this->timezone);
+
+        if ($timezone === null) {
+            return null;
+        }
+
+        try {
+            new \DateTimeZone($timezone);
+        } catch (\Exception) {
+            throw new InvalidArgumentException(static::trans('save.invalid_timezone', [
+                'timezone' => $timezone,
+            ]));
+        }
+
+        return $timezone;
+    }
+
     protected static function stringOrNull(mixed $value): ?string
     {
-        return (is_string($value) && trim($value) !== '') ? $value : null;
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return mb_substr($value, 0, self::MAX_LABEL_LENGTH);
     }
 
     protected static function plugin(): ?FilamentBusinessHoursPlugin

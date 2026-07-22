@@ -246,6 +246,50 @@ document.addEventListener('alpine:init', () => {
             this.closeEditor();
         },
 
+        // Keyboard-accessible alternative to drag-creation, used by the "+"
+        // button in each day header: creates a one-hour range on the first
+        // free hour of the day and opens the precise editor on it.
+        addRange(day) {
+            const sameDay = this.parsed(day).filter((range) => ! range.overnight);
+
+            const candidates = [];
+
+            for (let hour = 9; hour <= 23; hour++) {
+                candidates.push(hour);
+            }
+
+            for (let hour = 8; hour >= 0; hour--) {
+                candidates.push(hour);
+            }
+
+            // A candidate must neither overlap nor touch an existing range,
+            // so the new range survives the merge pass untouched.
+            const free = candidates.find((hour) => ! sameDay.some(
+                (range) => (hour * 60) <= range.end && ((hour + 1) * 60) >= range.start,
+            ));
+
+            if (free === undefined) {
+                return;
+            }
+
+            const start = free * 60;
+            const end = start + 60;
+            const ranges = this.parsed(day);
+
+            ranges.push({ overnight: false, start, end });
+            this.commitRanges(day, ranges);
+
+            this.$nextTick(() => {
+                const index = (this.state[day] ?? []).indexOf(
+                    this.toTime(start) + '-' + (end >= 1440 ? '24:00' : this.toTime(end)),
+                );
+
+                if (index !== -1) {
+                    this.openEditor(day, index);
+                }
+            });
+        },
+
         /* ------------------------------------------------------------------ */
         /* Layout                                                             */
         /* ------------------------------------------------------------------ */
@@ -287,10 +331,16 @@ document.addEventListener('alpine:init', () => {
                 return this.texts.closed;
             }
 
-            const hours = Math.floor(minutes / 60);
+            const hours = String(Math.floor(minutes / 60));
             const rest = minutes % 60;
 
-            return rest === 0 ? `${hours} h` : `${hours} h ${String(rest).padStart(2, '0')}`;
+            if (rest === 0) {
+                return (this.texts.totalHours ?? ':hours h').replace(':hours', hours);
+            }
+
+            return (this.texts.totalHoursMinutes ?? ':hours h :minutes')
+                .replace(':hours', hours)
+                .replace(':minutes', String(rest).padStart(2, '0'));
         },
 
         minutesFromPointer(event, column) {
@@ -322,7 +372,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             const column = event.currentTarget;
-            const anchor = this.snapFloor(this.minutesFromPointer(event, column));
+            const anchor = Math.min(1440 - this.step, this.snapFloor(this.minutesFromPointer(event, column)));
 
             this.drag = {
                 type: 'create',
@@ -509,9 +559,10 @@ document.addEventListener('alpine:init', () => {
             }
 
             const editorWidth = 248;
+            const bounds = column.offsetParent?.scrollWidth ?? column.parentElement?.scrollWidth ?? Infinity;
             let left = column.offsetLeft + column.offsetWidth + 8;
 
-            if (left + editorWidth > column.offsetParent.scrollWidth) {
+            if (left + editorWidth > bounds) {
                 left = Math.max(8, column.offsetLeft - editorWidth - 8);
             }
 

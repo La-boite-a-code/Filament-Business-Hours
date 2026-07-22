@@ -60,3 +60,33 @@ it('keeps overnight ranges verbatim when overflow is allowed', function (): void
     expect(HourRanges::normalize(['22:00-02:00', '09:00-12:00'], allowOverflow: true))
         ->toBe(['09:00-12:00', '22:00-02:00']);
 });
+
+it('accepts a full day range', function (): void {
+    expect(HourRanges::normalize(['00:00-24:00']))->toBe(['00:00-24:00']);
+});
+
+it('accepts the last quarter of the day', function (): void {
+    expect(HourRanges::normalize(['23:45-24:00']))->toBe(['23:45-24:00']);
+});
+
+it('trims surrounding whitespace', function (): void {
+    expect(HourRanges::normalize(['  09:00-12:00  ']))->toBe(['09:00-12:00']);
+});
+
+it('absorbs ranges fully contained in another', function (): void {
+    expect(HourRanges::normalize(['09:00-18:00', '10:00-11:00']))->toBe(['09:00-18:00']);
+});
+
+it('deduplicates identical overnight ranges', function (): void {
+    expect(HourRanges::normalize(['22:00-02:00', '22:00-02:00'], allowOverflow: true))
+        ->toBe(['22:00-02:00']);
+});
+
+it('converts between minutes and times, including midnight as 24:00', function (): void {
+    expect(HourRanges::minutes('00:00'))->toBe(0)
+        ->and(HourRanges::minutes('09:30'))->toBe(570)
+        ->and(HourRanges::minutes('24:00'))->toBe(1440)
+        ->and(HourRanges::time(0))->toBe('00:00')
+        ->and(HourRanges::time(570))->toBe('09:30')
+        ->and(HourRanges::time(1440))->toBe('24:00');
+});
