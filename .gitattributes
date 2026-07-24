@@ -10,6 +10,7 @@
 /phpstan.neon.dist  export-ignore
 /pint.json          export-ignore
 /CHANGELOG.md       export-ignore
+/SECURITY.md        export-ignore
 
 # Enforce consistent line endings.
 *.php               text eol=lf

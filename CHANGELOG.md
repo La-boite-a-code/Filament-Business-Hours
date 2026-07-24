@@ -2,6 +2,22 @@
 
 All notable changes to `laboiteacode/filament-business-hours` will be documented in this file.
 
+## v1.0.1 - 2026-07-24
+
+Supply-chain hardening release. No code changes.
+
+- CI: GitHub Actions are now pinned to full commit SHAs
+  (actions/checkout v4.4.0, shivammathur/setup-php 2.37.2), so a
+  re-pointed tag can no longer inject code into the build.
+- Security policy: new SECURITY.md describing the private vulnerability
+  reporting channels (GitHub advisories or email) and the response
+  timelines.
+- Dependencies: Dependabot now watches Composer packages and GitHub
+  Actions weekly, with a 7-day cooldown (14 days for majors) so a
+  compromised release is never pulled before the ecosystem reacts.
+- Dist archive: SECURITY.md is excluded from the Composer distribution
+  like the other repository-only files.
+
 ## v1.0.0 - 2026-07-23
 
 First stable release. The plugin API and the stored format (native

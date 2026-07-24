@@ -1,0 +1,22 @@
+# Keep GitHub Actions and Composer dependencies up to date.
+#
+# The cooldown delays every update by a few days after a release is
+# published, so a compromised package pulled by its maintainer never
+# reaches this repository before the ecosystem has had time to react.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: composer
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
